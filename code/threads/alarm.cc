@@ -52,7 +52,7 @@ Alarm::CallBack()
     Interrupt *interrupt = kernel->interrupt;
     MachineStatus status = interrupt->getStatus();
     
-    if (status == IdleMode) {	// is it time to quit?
+    if (status == IdleMode && !_recoveryroom.Wakeup() && _recoveryroom.IsEmpty()) {	// is it time to quit?
         if (!interrupt->AnyFutureInterrupts()) {
 	    timer->Disable();	// turn off the timer
 	}
@@ -61,3 +61,39 @@ Alarm::CallBack()
     }
 }
 
+void Alarm::WaitUntil(int x) {
+	IntStatus oldLevel = kernel->interrupt->SetLevel(IntOff);
+	Thread* t = kernel->currentThread;
+	cout<<"Alarm::WaitUntil go sleep" << endl;
+	_recoveryroom.poison(t, x);
+	kernel->interrupt->SetLevel(oldLevel);
+}
+
+bool Recoveryroom::IsEmpty() {
+    return _rooms.size() == 0;
+}
+
+void Recoveryroom::poison(Thread*t, int x) {
+    ASSERT(kernel->interrupt->getLevel() == IntOff);
+    _rooms.push_back(Room(t, current + x));
+    t->Sleep(false);
+}
+
+bool Recoveryroom::Wakeup() {
+    bool woken = false;
+
+    current ++;
+
+    for(std::list<Room>::iterator it = _rooms.begin(); 
+        it != _rooms.end(); ) {
+        if(current >= it->when) {
+            woken = true;
+            cout << "Recoveryroom::MorningCall Thread woken" << endl;
+            kernel->scheduler->ReadyToRun(it->sleeper);
+            it = _rooms.erase(it);
+        } else {
+            it++;
+        }
+    }
+    return woken;
+}

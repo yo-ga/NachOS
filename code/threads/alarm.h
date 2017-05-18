@@ -21,6 +21,26 @@
 #include "utility.h"
 #include "callback.h"
 #include "timer.h"
+#include <list>
+#include "thread.h"
+
+class Recoveryroom {
+	public:
+		Recoveryroom():current(0){};
+		void poison(Thread *t, int x);
+		bool Wakeup();
+		bool IsEmpty();
+	private:
+		class Room {
+			public:
+				Room(Thread* t, int x):
+					sleeper(t),when(x){};
+				Thread* sleeper;
+				int when;
+		};
+	int current;
+	std::list<Room> _rooms;
+};
 
 // The following class defines a software alarm clock. 
 class Alarm : public CallBackObj {
@@ -36,6 +56,7 @@ class Alarm : public CallBackObj {
 
     void CallBack();		// called when the hardware
 				// timer generates an interrupt
+	Recoveryroom _recoveryroom;
 };
 
 #endif // ALARM_H

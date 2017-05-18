@@ -139,9 +139,15 @@ PrintInt:
 	.end    PrintInt
 
 /* dummy function to keep gcc happy */
-        .globl  __main
-        .ent    __main
+        .globl  Sleep
+        .ent    Sleep
+Sleep:
+	addiu	$2,$0,SC_Sleep
+	syscall
+	j	$31
+	.end	Sleep
+	.globl	__main
+	.ent	__main
 __main:
         j       $31
         .end    __main
-
